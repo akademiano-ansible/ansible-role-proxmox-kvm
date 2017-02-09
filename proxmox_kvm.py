@@ -328,7 +328,7 @@ options:
     default: 'no'
   timeout:
     description:
-      - Timeout for operations.
+      - Timeout for operations. C(clone) can take a while. Increase the timeout if need.
     default: 30
   update:
     description:
