@@ -673,12 +673,15 @@ def settings(module, proxmox, vmid, node, name, timeout, **kwargs):
         return False
 
 
-def create_vm(module, proxmox, vmid, newid, node, name, memory, cpu, cores, sockets, timeout, update, **kwargs):
+def create_vm(module, proxmox, vmid, newid, node, name, memory, cpu, cores, sockets, timeout, update, format, **kwargs):
     # Available only in PVE 4
     only_v4 = ['force', 'protection', 'skiplock']
 
     # valide clone parameters
-    valid_clone_params = ['format', 'full', 'pool', 'snapname', 'storage', 'target']
+    if module.params['full']:
+        valid_clone_params = ['format', 'full', 'pool', 'snapname', 'storage', 'target']
+    else:
+        valid_clone_params = ['full', 'pool', 'snapname', 'storage', 'target']
     clone_params = {}
     # Default args for vm. Note: -args option is for experts only. It allows you to pass arbitrary arguments to kvm.
     vm_args = "-serial unix:/var/run/qemu-server/{}.serial,server,nowait".format(vmid)
@@ -834,7 +837,7 @@ def main():
             onboot=dict(type='bool', default='yes'),
             ostype=dict(default='l26', choices=['other', 'wxp', 'w2k', 'w2k3', 'w2k8', 'wvista', 'win7', 'win8', 'l24', 'l26', 'solaris']),
             parallel=dict(type='dict'),
-            pause = dict(type='int', default=1),
+            pause = dict(type='int', default=0),
             pool=dict(type='str'),
             protection=dict(type='bool'),
             reboot=dict(type='bool'),
@@ -880,6 +883,7 @@ def main():
     cpu = module.params['cpu']
     cores = module.params['cores']
     delete = module.params['delete']
+    format = module.params['format']
     memory = module.params['memory']
     name = module.params['name']
     newid = module.params['newid']
@@ -972,7 +976,7 @@ def main():
             elif not node_check(proxmox, node):
                 module.fail_json(msg="node '%s' does not exist in cluster" % node)
 
-            create_vm(module, proxmox, vmid, newid, node, name, memory, cpu, cores, sockets, timeout, update,
+            create_vm(module, proxmox, vmid, newid, node, name, memory, cpu, cores, sockets, timeout, update, format,
                       acpi=module.params['acpi'],
                       agent=module.params['agent'],
                       autostart=module.params['autostart'],
