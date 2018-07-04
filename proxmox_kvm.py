@@ -623,7 +623,7 @@ def get_vminfo(module, proxmox, node, vmid, **kwargs):
     try:
         vm = proxmox.nodes(node).qemu(vmid).config.get()
     except Exception as e:
-        module.fail_json(msg='Getting information for VM with vmid = %s failed with exception: %s' % (vmid, e))
+        module.fail_json(msg='Getting information for VM with vmid %s failed with exception: %s' % (vmid, e))
 
     # Sanitize kwargs. Remove not defined args and ensure True and False converted to int.
     kwargs = dict((k, v) for k, v in kwargs.items() if v is not None)
@@ -915,14 +915,17 @@ def main():
                 else:
                     vmid = get_vmid(proxmox, clone)[0]
             except Exception as e:
-                if not clone:
-                    module.fail_json(msg="VM {} does not exist in cluster.".format(name))
+                if clone:
+                   module.fail_json(msg="VM {} does not exist in cluster.".format(clone))
+                elif state in ['absent','current']:
+                    vmid = None
+                    pass
                 else:
-                    module.fail_json(msg="VM {} does not exist in cluster.".format(clone))
+                    module.fail_json(msg="VM {} does not exist in cluster.".format(name))
 
     if clone is not None:
         if get_vmid(proxmox, name):
-            module.exit_json(changed=False, msg="VM with name <%s> already exists" % name)
+            module.exit_json(changed=False, msg="VM with name %s already exists" % name)
         if vmid is not None:
             vm = get_vm(proxmox, vmid)
             if not vm:
@@ -953,9 +956,9 @@ def main():
     if state == 'present':
         try:
             if get_vm(proxmox, vmid) and not (update or clone):
-                module.exit_json(changed=False, msg="VM with vmid <%s> already exists" % vmid)
+                module.exit_json(changed=False, msg="VM with vmid %s already exists" % vmid)
             elif get_vmid(proxmox, name) and not (update or clone):
-                module.exit_json(changed=False, msg="VM with name <%s> already exists" % name)
+                module.exit_json(changed=False, msg="VM with name %s already exists" % name)
             elif not (node, name):
                 module.fail_json(msg='node, name is mandatory for creating/updating vm')
             elif not node_check(proxmox, node):
@@ -1039,7 +1042,7 @@ def main():
         try:
             vm = get_vm(proxmox, vmid)
             if not vm:
-                module.fail_json(msg='VM with vmid <%s> does not exist in cluster' % vmid)
+                module.fail_json(msg='VM with vmid %s does not exist in cluster' % vmid)
             if getattr(proxmox.nodes(vm[0]['node']), VZ_TYPE)(vmid).status.current.get()['status'] == 'running':
                 module.exit_json(changed=False, msg="VM %s is already running" % vmid)
 
@@ -1052,7 +1055,7 @@ def main():
         try:
             vm = get_vm(proxmox, vmid)
             if not vm:
-                module.fail_json(msg='VM with vmid = %s does not exist in cluster' % vmid)
+                module.fail_json(msg='VM with vmid %s does not exist in cluster' % vmid)
 
             if getattr(proxmox.nodes(vm[0]['node']), VZ_TYPE)(vmid).status.current.get()['status'] == 'stopped':
                 module.exit_json(changed=False, msg="VM %s is already stopped" % vmid)
@@ -1066,7 +1069,7 @@ def main():
         try:
             vm = get_vm(proxmox, vmid)
             if not vm:
-                module.fail_json(msg='VM with vmid = %s does not exist in cluster' % vmid)
+                module.fail_json(msg='VM with vmid %s does not exist in cluster' % vmid)
             if getattr(proxmox.nodes(vm[0]['node']), VZ_TYPE)(vmid).status.current.get()['status'] == 'stopped':
                 module.exit_json(changed=False, msg="VM %s is not running" % vmid)
 
@@ -1076,10 +1079,12 @@ def main():
             module.fail_json(msg="restarting of VM %s failed with exception: %s" % (vmid, e))
 
     elif state == 'absent':
+        if vmid is None:
+          module.exit_json(changed=False, msg="VM %s already absent" % name)
         try:
             vm = get_vm(proxmox, vmid)
             if not vm:
-                module.exit_json(changed=False, msg="VM %s does not exist" % vmid)
+                module.exit_json(changed=False, msg="VM with vmid %s already absent" % vmid)
 
             if getattr(proxmox.nodes(vm[0]['node']), VZ_TYPE)(vmid).status.current.get()['status'] == 'running':
                 module.exit_json(changed=False, msg="VM %s is running. Stop it before deletion." % vmid)
@@ -1099,17 +1104,33 @@ def main():
             module.fail_json(msg="deletion of VM %s failed with exception: %s" % (vmid, e))
 
     elif state == 'current':
-        status = {}
+      status = {}
+      if vmid is None:
+        current = 'absent'
+        status['status'] = current
+        module.exit_json(changed=False, msg="VM %s is %s" % (name, current), **status)
+
+      vm = get_vm(proxmox, vmid)
+      if not vm:
+        current = 'absent'
+        status['status'] = current
+        if name is not None:
+          module.exit_json(changed=False, msg="VM %s with vmid %s is %s" % (name, vmid, current), **status)
+        else:
+          module.exit_json(changed=False, msg="VM with vmid %s is %s" % (vmid, current), **status)
+      else:
         try:
-            vm = get_vm(proxmox, vmid)
-            if not vm:
-                module.fail_json(msg='VM with vmid = %s does not exist in cluster' % vmid)
-            current = getattr(proxmox.nodes(vm[0]['node']), VZ_TYPE)(vmid).status.current.get()['status']
-            status['status'] = current
-            if status:
-                module.exit_json(changed=False, msg="VM %s with vmid = %s is %s" % (name, vmid, current), **status)
+          current = getattr(proxmox.nodes(vm[0]['node']), VZ_TYPE)(vmid).status.current.get()['status']
+          status['status'] = current
+          if status:
+            module.exit_json(changed=False, msg="VM %s with vmid %s is %s" % (vm[0]['name'], vmid, current), **status)
         except Exception as e:
-            module.fail_json(msg="Unable to get vm {} with vmid = {} status: ".format(name, vmid) + str(e))
+          if name is not None and vmid is not None:
+            module.fail_json(msg="Unable to get vm {} with vmid {} status: ".format(name, vmid) + str(e))
+          elif name is not None:
+            module.fail_json(msg="Unable to get vm {} status: ".format(name) + str(e))
+          elif vmid is not None:
+            module.fail_json(msg="Unable to get vm with vmid {} status: ".format(vmid) + str(e))
 
 
 if __name__ == '__main__':
