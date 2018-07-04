@@ -236,6 +236,7 @@ options:
       - Please see issue => https://github.com/ansible/ansible/issues/28545
       - We recommend using C(loop_control). See https://docs.ansible.com/ansible/latest/user_guide/playbooks_loops.html#loop-control
     default: 0
+    version_added: "2.7"
   pool:
     description:
       - Add the new VM to the specified pool.
