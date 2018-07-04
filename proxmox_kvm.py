@@ -230,6 +230,12 @@ options:
       - A hash/dictionary of map host parallel devices. C(parallel='{"key":"value", "key":"value"}').
       - Keys allowed are - (parallel[n]) where 0 ≤ n ≤ 2.
       - Values allowed are - C("/dev/parport\d+|/dev/usb/lp\d+").
+  pause:
+    description:
+      - Pause the cluster before getting next C(<vmid>).
+      - Please see issue => https://github.com/ansible/ansible/issues/28545
+      - We recommend using C(loop_control: pause: <time>). See https://docs.ansible.com/ansible/latest/user_guide/playbooks_loops.html#loop-control
+    default: 0
   pool:
     description:
       - Add the new VM to the specified pool.
@@ -593,8 +599,8 @@ from ansible.module_utils._text import to_native
 
 VZ_TYPE = 'qemu'
 
-
-def get_nextvmid(module, proxmox):
+def get_nextvmid(proxmox, pause):
+    time.sleep(pause)
     try:
         vmid = proxmox.cluster.nextid.get()
         return vmid
@@ -828,6 +834,7 @@ def main():
             onboot=dict(type='bool', default='yes'),
             ostype=dict(default='l26', choices=['other', 'wxp', 'w2k', 'w2k3', 'w2k8', 'wvista', 'win7', 'win8', 'l24', 'l26', 'solaris']),
             parallel=dict(type='dict'),
+            pause = dict(type='int', default=1),
             pool=dict(type='str'),
             protection=dict(type='bool'),
             reboot=dict(type='bool'),
@@ -877,6 +884,7 @@ def main():
     name = module.params['name']
     newid = module.params['newid']
     node = module.params['node']
+    pause = module.params['pause']
     revert = module.params['revert']
     sockets = module.params['sockets']
     state = module.params['state']
@@ -905,7 +913,7 @@ def main():
     if not vmid:
         if state == 'present' and (not update and not clone) and (not delete and not revert):
             try:
-                vmid = get_nextvmid(module, proxmox)
+                vmid = get_nextvmid(proxmox, pause)
             except Exception as e:
                 module.fail_json(msg="Can't get the next vimd for VM {} automatically. Ensure your cluster state is good".format(name))
         else:
@@ -932,7 +940,7 @@ def main():
                 module.fail_json(msg='VM with vmid = %s does not exist in cluster' % vmid)
         if not newid:
             try:
-                newid = get_nextvmid(module, proxmox)
+                newid = get_nextvmid(proxmox, pause)
             except Exception as e:
                 module.fail_json(msg="Can't get the next vimd for VM {} automatically. Ensure your cluster state is good".format(name))
         else:
