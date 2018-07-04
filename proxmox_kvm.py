@@ -234,7 +234,7 @@ options:
     description:
       - Pause the cluster before getting next C(<vmid>).
       - Please see issue => https://github.com/ansible/ansible/issues/28545
-      - We recommend using C(loop_control: pause: <time>). See https://docs.ansible.com/ansible/latest/user_guide/playbooks_loops.html#loop-control
+      - We recommend using C(loop_control). See https://docs.ansible.com/ansible/latest/user_guide/playbooks_loops.html#loop-control
     default: 0
   pool:
     description:
@@ -599,6 +599,7 @@ from ansible.module_utils._text import to_native
 
 VZ_TYPE = 'qemu'
 
+
 def get_nextvmid(module, proxmox, pause):
     time.sleep(pause)
     try:
@@ -837,7 +838,7 @@ def main():
             onboot=dict(type='bool', default='yes'),
             ostype=dict(default='l26', choices=['other', 'wxp', 'w2k', 'w2k3', 'w2k8', 'wvista', 'win7', 'win8', 'l24', 'l26', 'solaris']),
             parallel=dict(type='dict'),
-            pause = dict(type='int', default=0),
+            pause=dict(type='int', default=0),
             pool=dict(type='str'),
             protection=dict(type='bool'),
             reboot=dict(type='bool'),
