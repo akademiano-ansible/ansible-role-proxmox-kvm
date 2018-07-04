@@ -837,7 +837,7 @@ def main():
             onboot=dict(type='bool', default='yes'),
             ostype=dict(default='l26', choices=['other', 'wxp', 'w2k', 'w2k3', 'w2k8', 'wvista', 'win7', 'win8', 'l24', 'l26', 'solaris']),
             parallel=dict(type='dict'),
-            pause = dict(type='int', default=1),
+            pause = dict(type='int', default=0),
             pool=dict(type='str'),
             protection=dict(type='bool'),
             reboot=dict(type='bool'),
