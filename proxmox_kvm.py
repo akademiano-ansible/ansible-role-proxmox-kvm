@@ -611,15 +611,15 @@ def get_nextvmid(module, proxmox, pause):
                          exception=traceback.format_exc())
 
 
-def get_vmid(module, proxmox, name):
+def get_vmid(proxmox, name):
     return [vm['vmid'] for vm in proxmox.cluster.resources.get(type='vm') if vm['name'] == name]
 
 
-def get_vm(module, proxmox, vmid):
+def get_vm(proxmox, vmid):
     return [vm for vm in proxmox.cluster.resources.get(type='vm') if vm['vmid'] == int(vmid)]
 
 
-def node_check(module, proxmox, node):
+def node_check(proxmox, node):
     return [True for nd in proxmox.nodes.get() if nd['node'] == node]
 
 
@@ -919,7 +919,7 @@ def main():
     if not vmid:
         if state == 'present' and (not update and not clone) and (not delete and not revert):
             try:
-                vmid = get_nextvmid(proxmox, pause)
+                vmid = get_nextvmid(module, proxmox, pause)
             except Exception as e:
                 module.fail_json(msg="Can't get the next vimd for VM {} automatically. Ensure your cluster state is good".format(name))
         else:
@@ -945,7 +945,7 @@ def main():
                 module.fail_json(msg='VM with vmid = %s does not exist in cluster' % vmid)
         if not newid:
             try:
-                newid = get_nextvmid(proxmox, pause)
+                newid = get_nextvmid(module, proxmox, pause)
             except Exception as e:
                 module.fail_json(msg="Can't get the next vimd for VM {} automatically. Ensure your cluster state is good".format(name))
         else:
