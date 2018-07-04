@@ -599,7 +599,7 @@ from ansible.module_utils._text import to_native
 
 VZ_TYPE = 'qemu'
 
-def get_nextvmid(proxmox, pause):
+def get_nextvmid(module, proxmox, pause):
     time.sleep(pause)
     try:
         vmid = proxmox.cluster.nextid.get()
@@ -609,15 +609,15 @@ def get_nextvmid(proxmox, pause):
                          exception=traceback.format_exc())
 
 
-def get_vmid(proxmox, name):
+def get_vmid(module, proxmox, name):
     return [vm['vmid'] for vm in proxmox.cluster.resources.get(type='vm') if vm['name'] == name]
 
 
-def get_vm(proxmox, vmid):
+def get_vm(module, proxmox, vmid):
     return [vm for vm in proxmox.cluster.resources.get(type='vm') if vm['vmid'] == int(vmid)]
 
 
-def node_check(proxmox, node):
+def node_check(module, proxmox, node):
     return [True for nd in proxmox.nodes.get() if nd['node'] == node]
 
 
@@ -931,7 +931,6 @@ def main():
                    module.fail_json(msg="VM {} does not exist in cluster.".format(clone))
                 elif state in ['absent','current']:
                     vmid = None
-                    pass
                 else:
                     module.fail_json(msg="VM {} does not exist in cluster.".format(name))
 
