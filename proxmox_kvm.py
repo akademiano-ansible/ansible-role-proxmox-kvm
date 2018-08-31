@@ -633,9 +633,14 @@ def get_vminfo(module, proxmox, node, vmid, **kwargs):
         if isinstance(kwargs[k], dict):
             kwargs.update(kwargs[k])
             del kwargs[k]
-
+    
     # Split information by type
-    for k, v in kwargs.items():
+    if not module.params['clone']:
+        param = kwargs
+    else:
+        param = vm
+
+    for k, v in param.items():
         if re.match(r'net[0-9]', k) is not None:
             interface = k
             k = vm[k]
@@ -651,8 +656,9 @@ def get_vminfo(module, proxmox, node, vmid, **kwargs):
             devices[device] = k
 
     results['mac'] = mac
-    results['devices'] = devices
     results['vmid'] = int(vmid)
+    results['devices'] = devices
+    
 
 
 def settings(module, proxmox, vmid, node, name, timeout, **kwargs):
@@ -1030,7 +1036,8 @@ def main():
             if update:
                 module.exit_json(changed=True, msg="VM %s with vmid %s updated" % (name, vmid))
             elif clone is not None:
-                module.exit_json(changed=True, msg="VM %s with newid %s cloned from vm with vmid %s" % (name, newid, vmid))
+                get_vminfo(module, proxmox, node, newid)
+                module.exit_json(changed=True, msg="VM %s with newid %s cloned from vm with vmid %s" % (name, newid, vmid), **results)
             else:
                 module.exit_json(changed=True, msg="VM %s with vmid %s deployed" % (name, vmid), **results)
         except Exception as e:
