@@ -633,7 +633,7 @@ def get_vminfo(module, proxmox, node, vmid, **kwargs):
         if isinstance(kwargs[k], dict):
             kwargs.update(kwargs[k])
             del kwargs[k]
-    
+
     # Split information by type
     if not module.params['clone']:
         param = kwargs
@@ -658,7 +658,6 @@ def get_vminfo(module, proxmox, node, vmid, **kwargs):
     results['mac'] = mac
     results['vmid'] = int(vmid)
     results['devices'] = devices
-    
 
 
 def settings(module, proxmox, vmid, node, name, timeout, **kwargs):
@@ -1141,6 +1140,7 @@ def main():
                     module.fail_json(msg="Unable to get vm {0} status: ".format(name) + str(e))
                 elif vmid is not None:
                     module.fail_json(msg="Unable to get vm with vmid {0} status: ".format(vmid) + str(e))
+
 
 if __name__ == '__main__':
     main()
