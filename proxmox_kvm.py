@@ -101,6 +101,10 @@ options:
     description:
       - Specify if to prevent changes if current configuration file has different SHA1 digest.
       - This can be used to prevent concurrent modifications.
+  disk:
+    description:
+      - Specify the disk if you want to convert only 1 disk to base image. C((ide|sata|scsi|virtio)\d+)
+      - Used only when C(template=yes)
   force:
     description:
       - Allow to force stop VM.
@@ -592,6 +596,11 @@ from ansible.module_utils._text import to_native
 
 
 VZ_TYPE = 'qemu'
+DISK = ['ide0', 'ide1', 'ide2', 'ide3', 'scsi0', 'scsi1', 'scsi2', 'scsi3', 'scsi4', 'scsi5', 'scsi6',
+        'scsi7', 'scsi8', 'scsi9', 'scsi10', 'scsi11', 'scsi12', 'scsi13', 'virtio0', 'virtio1', 'virtio2',
+        'virtio3', 'virtio4', 'virtio5', 'virtio6', 'virtio7', 'virtio8', 'virtio9', 'virtio10', 'virtio11',
+        'virtio12', 'virtio13', 'virtio14', 'virtio15', 'sata0', 'sata1', 'sata2', 'sata3', 'sata4', 'sata5',
+        'efidisk0']
 
 
 def get_nextvmid(module, proxmox):
@@ -617,13 +626,23 @@ def node_check(proxmox, node):
 
 def get_vminfo(module, proxmox, node, vmid, **kwargs):
     global results
+    global is_template
     results = {}
     mac = {}
     devices = {}
+
     try:
         vm = proxmox.nodes(node).qemu(vmid).config.get()
     except Exception as e:
         module.fail_json(msg='Getting information for VM with vmid %s failed with exception: %s' % (vmid, e))
+
+    # Check if VM is a template
+    if 'template' not in vm:
+        is_template = False
+    elif int(vm['template']) == 1:
+        is_template = True
+    else:
+        is_template = False
 
     # Sanitize kwargs. Remove not defined args and ensure True and False converted to int.
     kwargs = dict((k, v) for k, v in kwargs.items() if v is not None)
@@ -667,6 +686,16 @@ def settings(module, proxmox, vmid, node, name, timeout, **kwargs):
     kwargs = dict((k, v) for k, v in kwargs.items() if v is not None)
 
     if getattr(proxmox_node, VZ_TYPE)(vmid).config.set(**kwargs) is None:
+        return True
+    else:
+        return False
+
+
+def convert_template(module, proxmox, node, vmid, **kwargs):
+    kwargs = dict((k, v) for k, v in kwargs.items() if v is not None)
+    proxmox_node = proxmox.nodes(node)
+
+    if getattr(proxmox_node, VZ_TYPE)(vmid).template.create(**kwargs) is None:
         return True
     else:
         return False
@@ -811,6 +840,7 @@ def main():
             delete=dict(type='str', default=None),
             description=dict(type='str'),
             digest=dict(type='str'),
+            disk=dict(type='str', choices=DISK, default=None),
             force=dict(type='bool', default=None),
             format=dict(type='str', default='qcow2', choices=['cloop', 'cow', 'qcow', 'qcow2', 'qed', 'raw', 'vmdk']),
             freeze=dict(type='bool'),
@@ -866,7 +896,7 @@ def main():
             vmid=dict(type='int', default=None),
             watchdog=dict(),
         ),
-        mutually_exclusive=[('delete', 'revert'), ('delete', 'update'), ('revert', 'update'), ('clone', 'update'), ('clone', 'delete'), ('clone', 'revert')],
+        mutually_exclusive=[('delete', 'revert'), ('delete', 'update'), ('revert', 'update'), ('clone', 'update'), ('clone', 'delete'), ('clone', 'revert'), ('clone', 'template')],
         required_one_of=[('name', 'vmid',)],
         required_if=[('state', 'present', ['node'])]
     )
@@ -1019,7 +1049,6 @@ def main():
                       tablet=module.params['tablet'],
                       target=module.params['target'],
                       tdf=module.params['tdf'],
-                      template=module.params['template'],
                       vcpus=module.params['vcpus'],
                       vga=module.params['vga'],
                       virtio=module.params['virtio'],
@@ -1032,13 +1061,21 @@ def main():
                            sata=module.params['sata'],
                            scsi=module.params['scsi'],
                            virtio=module.params['virtio'])
+
+            if module.params['template']:
+                if not is_template:
+                    convert_template(module, proxmox, node, vmid, disk=module.params['disk'])
+                    template_msg = "It's also converted to template."
+                else:
+                    template_msg = "It's already a template."
+
             if update:
-                module.exit_json(changed=True, msg="VM %s with vmid %s updated" % (name, vmid))
+                module.exit_json(changed=True, msg="VM %s with vmid %s updated. %s" % (name, vmid, template_msg or None))
             elif clone is not None:
                 get_vminfo(module, proxmox, node, newid)
                 module.exit_json(changed=True, msg="VM %s with newid %s cloned from vm with vmid %s" % (name, newid, vmid), **results)
             else:
-                module.exit_json(changed=True, msg="VM %s with vmid %s deployed" % (name, vmid), **results)
+                module.exit_json(changed=True, msg="VM %s with vmid %s deployed. %s" % (name, vmid, template_msg or None), **results)
         except Exception as e:
             if update:
                 module.fail_json(msg="Unable to update vm {0} with vimd {1}=".format(name, vmid) + str(e))
