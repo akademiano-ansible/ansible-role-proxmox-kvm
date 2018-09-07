@@ -105,6 +105,7 @@ options:
     description:
       - Specify the disk if you want to convert only 1 disk to base image. C((ide|sata|scsi|virtio)\d+)
       - Used only when C(template=yes)
+    version_added: "2.7"
   force:
     description:
       - Allow to force stop VM.
