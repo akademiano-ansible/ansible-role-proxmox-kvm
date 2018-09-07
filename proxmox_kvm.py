@@ -105,7 +105,12 @@ options:
     description:
       - Specify the disk if you want to convert only 1 disk to base image. C((ide|sata|scsi|virtio)\d+)
       - Used only when C(template=yes)
-    version_added: "2.7"
+    choices: ['ide0', 'ide1', 'ide2', 'ide3', 'scsi0', 'scsi1', 'scsi2', 'scsi3', 'scsi4', 'scsi5', 'scsi6',
+        'scsi7', 'scsi8', 'scsi9', 'scsi10', 'scsi11', 'scsi12', 'scsi13', 'virtio0', 'virtio1', 'virtio2',
+        'virtio3', 'virtio4', 'virtio5', 'virtio6', 'virtio7', 'virtio8', 'virtio9', 'virtio10', 'virtio11',
+        'virtio12', 'virtio13', 'virtio14', 'virtio15', 'sata0', 'sata1', 'sata2', 'sata3', 'sata4', 'sata5',
+        'efidisk0']
+    version_added: "2.8"
   force:
     description:
       - Allow to force stop VM.
