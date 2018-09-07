@@ -902,7 +902,8 @@ def main():
             vmid=dict(type='int', default=None),
             watchdog=dict(),
         ),
-        mutually_exclusive=[('delete', 'revert'), ('delete', 'update'), ('revert', 'update'), ('clone', 'update'), ('clone', 'delete'), ('clone', 'revert'), ('clone', 'template')],
+        mutually_exclusive=[('delete', 'revert'), ('delete', 'update'), ('revert', 'update'), ('clone', 'update'), ('clone', 'delete'), ('clone', 'revert'),
+                            ('clone', 'template')],
         required_one_of=[('name', 'vmid',)],
         required_if=[('state', 'present', ['node'])]
     )
