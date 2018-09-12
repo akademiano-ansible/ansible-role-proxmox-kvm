@@ -1069,20 +1069,21 @@ def main():
                            scsi=module.params['scsi'],
                            virtio=module.params['virtio'])
 
+            template_msg = ''
             if module.params['template']:
                 if not is_template:
                     convert_template(module, proxmox, node, vmid, disk=module.params['disk'])
-                    template_msg = "It's also converted to template."
+                    template_msg = " It's also converted to template."
                 else:
-                    template_msg = "It's already a template."
+                    template_msg = " It's already a template."
 
             if update:
-                module.exit_json(changed=True, msg="VM %s with vmid %s updated. %s" % (name, vmid, template_msg or None))
+                module.exit_json(changed=True, msg="VM %s with vmid %s updated.%s" % (name, vmid, template_msg))
             elif clone is not None:
                 get_vminfo(module, proxmox, node, newid)
                 module.exit_json(changed=True, msg="VM %s with newid %s cloned from vm with vmid %s" % (name, newid, vmid), **results)
             else:
-                module.exit_json(changed=True, msg="VM %s with vmid %s deployed. %s" % (name, vmid, template_msg or None), **results)
+                module.exit_json(changed=True, msg="VM %s with vmid %s deployed.%s" % (name, vmid, template_msg), **results)
         except Exception as e:
             if update:
                 module.fail_json(msg="Unable to update vm {0} with vimd {1}=".format(name, vmid) + str(e))
