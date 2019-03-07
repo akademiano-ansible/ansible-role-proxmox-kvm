@@ -1,7 +1,7 @@
 ---
 
 - name: "Create VM-KVM clone"
-  proxmox_kvm_dev:
+  proxmox_kvm:
     api_user: "{{proxmox.api.user}}"
     api_password: "{{proxmox_api_password}}"
     api_host: "{{proxmox.api.host}}"
