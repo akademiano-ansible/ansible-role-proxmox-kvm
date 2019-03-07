@@ -1,2 +1,6 @@
 ---
 proxmox_default_api_validate_certs: no
+proxmox_default_vm_net_mac_suffix: 00:00:00
+proxmox_default_vm_net_bridge: vmbr0
+
+

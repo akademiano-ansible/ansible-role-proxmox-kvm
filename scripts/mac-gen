@@ -1,0 +1,74 @@
+#!/bin/bash
+
+set -e
+
+ME=`basename $0`
+function print_help() {
+    echo "Генерация mac"
+    echo
+    echo "Использование: $ME options..."
+    echo "Параметры:"
+    echo "  -h          hostname"
+    echo "  -p          prefix"
+    echo "  -s          suffix"
+    echo
+}
+
+
+while getopts ":h:p:s:h" opt ;
+do
+    case $opt in
+        h) hostname=$OPTARG;
+            ;;
+        p) prefix=$OPTARG;
+            ;;
+        s) suffix=$OPTARG;
+            ;;
+        h) print_help
+            exit 1
+            ;;
+        *) echo "Неправильный параметр";
+            echo "Для вызова справки запустите $ME -h";
+            exit 1
+            ;;
+        esac
+done
+
+if [ -z "$hostname" ]; then
+    echo "Error: -h hostname is EMPTY!"
+    exit 1
+fi
+
+if [ -z "$suffix" ]; then
+    echo "Error: -s suffix is EMPTY!"
+    exit 1
+fi
+
+if [[ ! $suffix =~ ^[0-9a-f]{2}\:[0-9a-f]{2}\:[0-9a-f]{2}$ ]];  then
+    echo "Error: -s suffix bad format, use xx:xx:xx"
+    exit 1;
+fi
+
+mac=$(echo $hostname|sha256sum|sed 's/^\(..\)\(..\)\(..\)\(..\)\(..\).*$/\1:\2:\3/')
+
+if [ ! -z "$prefix" ]; then
+  last=$( echo "$mac" | cut -d: -f 2-3 )
+  mac="$prefix:$last"
+fi
+
+
+mac="$mac:$suffix"
+
+lastfive=$( echo "$mac" | cut -d: -f 2-6 )
+firstbyte=$( echo "$mac" | cut -d: -f 1 )
+
+# make sure bit 0 (broadcast) of $firstbyte is not set,
+# and bit 1 (local) is set.
+# i.e. via bitwise AND with 254 and bitwise OR with 2.
+
+firstbyte=$( printf '%02x' $(( 0x$firstbyte & 254 | 2)) )
+
+mac="$firstbyte:$lastfive"
+
+echo "$mac"
+

@@ -1,6 +1,32 @@
 ---
+- name: generate mac
+  delegate_to: 127.0.0.1
+  script: "{{ role_path }}/scripts/mac-gen  -h {{vm.name}} -s {{item.mac_suffix | default(proxmox_default_vm_net_mac_suffix, true)}}"
+  loop: "{{vm.net}}"
+  register: nets_pre_proc_mac
+
+- set_fact: 
+    net_item: "{{item.item |combine({'mac':item.stdout | replace('\n', ''), 'name':'net'+net_idx|string})}}"
+  loop: "{{nets_pre_proc_mac.results}}"
+  loop_control:
+    index_var: net_idx
+  register: nets_results
+
+#- name: make a list
+#  set_fact: nets="{{ nets_results.results | map(attribute='ansible_facts.net_item') | list }}"
+
+- set_fact:
+    net_str: '"{{item.name}}":"{{item.model}}={{item.mac}},bridge={{item.brige|default(proxmox_default_vm_net_bridge)}},tag={{item.tag}}"'
+  loop: "{{ nets_results.results | map(attribute='ansible_facts.net_item') | list }}"
+  register: net_str_results
+
+- name: make a string
+  set_fact: 
+    vm_net: "{ {{net_str_results.results | map(attribute='ansible_facts.net_str')|list|join(', ')}} }"
+
 
 - name: "Create VM-KVM clone"
+  delegate_to: 127.0.0.1
   proxmox_kvm:
     api_user: "{{proxmox.api.user}}"
     api_password: "{{proxmox_api_password}}"
@@ -10,18 +36,45 @@
     newid: "{{vm.id}}"
     name: "{{vm.name}}"
     node: "{{vm.node|default(proxmox_default_kvm_node)}}"
-    #format: raw
-    full: false
+    full: no
     state: present
-  delegate_to: 127.0.0.1
 
-- name: "Start VM-KVM"
+- name: "Update VM-KVM network"
+  delegate_to: 127.0.0.1
   proxmox_kvm:
     api_user: "{{proxmox.api.user}}"
     api_password: "{{proxmox_api_password}}"
     api_host: "{{proxmox.api.host}}"
     validate_certs: "{{proxmox.api.validate_certs| default (proxmox_default_api_validate_certs)}}"
     vmid: "{{vm.id}}"
+    name: "{{vm.name}}"
     node: "{{vm.node|default(proxmox_default_kvm_node)}}"
-    state: started
+    update: yes
+    net: "{{vm_net}}"
+
+
+- name: "Update VM-KVM scsi"
   delegate_to: 127.0.0.1
+  proxmox_kvm:
+    api_user: "{{proxmox.api.user}}"
+    api_password: "{{proxmox_api_password}}"
+    api_host: "{{proxmox.api.host}}"
+    validate_certs: "{{proxmox.api.validate_certs| default (proxmox_default_api_validate_certs)}}"
+    vmid: "{{vm.id}}"
+    name: "{{vm.name}}"
+    node: "{{vm.node|default(proxmox_default_kvm_node)}}"
+    update: yes
+    scsi: "{{vm.scsi}}"
+
+
+#- name: "Start VM-KVM"
+#  delegate_to: 127.0.0.1
+#  proxmox_kvm:
+#    api_user: "{{proxmox.api.user}}"
+#    api_password: "{{proxmox_api_password}}"
+#    api_host: "{{proxmox.api.host}}"
+#    validate_certs: "{{proxmox.api.validate_certs| default (proxmox_default_api_validate_certs)}}"
+#    vmid: "{{vm.id}}"
+#    node: "{{vm.node|default(proxmox_default_kvm_node)}}"
+#    state: started
+  
