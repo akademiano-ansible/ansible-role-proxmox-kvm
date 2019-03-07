@@ -1,0 +1,27 @@
+---
+
+- name: "Create VM-KVM clone"
+  proxmox_kvm_dev:
+    api_user: "{{proxmox.api.user}}"
+    api_password: "{{proxmox_api_password}}"
+    api_host: "{{proxmox.api.host}}"
+    validate_certs: "{{proxmox_api_validate_certs| default(proxmox_default_api_validate_certs, true)}}"
+    clone: "{{vm.template|default(proxmox_default_kvm_template)}}"
+    newid: "{{vm.id}}"
+    name: "{{vm.name}}"
+    node: "{{vm.node|default(proxmox_default_kvm_node)}}"
+    #format: raw
+    full: false
+    state: present
+  delegate_to: 127.0.0.1
+
+- name: "Start VM-KVM"
+  proxmox_kvm:
+    api_user: "{{proxmox.api.user}}"
+    api_password: "{{proxmox_api_password}}"
+    api_host: "{{proxmox.api.host}}"
+    validate_certs: "{{proxmox.api.validate_certs| default (proxmox_default_api_validate_certs)}}"
+    vmid: "{{vm.id}}"
+    node: "{{vm.node|default(proxmox_default_kvm_node)}}"
+    state: started
+  delegate_to: 127.0.0.1

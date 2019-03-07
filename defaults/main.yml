@@ -1,0 +1,2 @@
+---
+proxmox_default_api_validate_certs: no
