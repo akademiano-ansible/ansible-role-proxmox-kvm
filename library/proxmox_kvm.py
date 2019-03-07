@@ -733,15 +733,15 @@ def create_vm(module, proxmox, vmid, newid, node, name, memory, cpu, cores, sock
                 del kwargs[p]
 
     # If update, don't update disk (virtio, ide, sata, scsi) and network interface
-    if update:
-        if 'virtio' in kwargs:
-            del kwargs['virtio']
-        if 'sata' in kwargs:
-            del kwargs['sata']
-        if 'scsi' in kwargs:
-            del kwargs['scsi']
-        if 'ide' in kwargs:
-            del kwargs['ide']
+#    if update:
+#        if 'virtio' in kwargs:
+#            del kwargs['virtio']
+#        if 'sata' in kwargs:
+#            del kwargs['sata']
+#        if 'scsi' in kwargs:
+#            del kwargs['scsi']
+#        if 'ide' in kwargs:
+#            del kwargs['ide']
 
     # Convert all dict in kwargs to elements. For hostpci[n], ide[n], net[n], numa[n], parallel[n], sata[n], scsi[n], serial[n], virtio[n]
     for k in kwargs.keys():
