@@ -684,6 +684,17 @@ def get_vminfo(module, proxmox, node, vmid, **kwargs):
     results['vmid'] = int(vmid)
     results['devices'] = devices
 
+def get_vminfo_raw(module, proxmox, node, vmid):
+    global results
+    results = {}
+
+    try:
+        vm = proxmox.nodes(node).qemu(vmid).config.get()
+    except Exception as e:
+        module.fail_json(msg='Getting information for VM with vmid %s failed with exception: %s' % (vmid, e))
+
+    results['vminfo']=vm
+
 
 def settings(module, proxmox, vmid, node, name, timeout, **kwargs):
     proxmox_node = proxmox.nodes(node)
@@ -887,7 +898,7 @@ def main():
             sockets=dict(type='int', default=1),
             startdate=dict(type='str'),
             startup=dict(),
-            state=dict(default='present', choices=['present', 'absent', 'stopped', 'started', 'restarted', 'current']),
+            state=dict(default='present', choices=['present', 'absent', 'stopped', 'started', 'restarted', 'current', 'vminfo']),
             storage=dict(type='str'),
             tablet=dict(type='bool', default='no'),
             target=dict(type='str'),
@@ -1174,10 +1185,14 @@ def main():
                 module.exit_json(changed=False, msg="VM with vmid %s is %s" % (vmid, current), **status)
         else:
             try:
+                get_vminfo_raw(module, proxmox, node, vmid)
+
                 current = getattr(proxmox.nodes(vm[0]['node']), VZ_TYPE)(vmid).status.current.get()['status']
                 status['status'] = current
                 if status:
                     module.exit_json(changed=False, msg="VM %s with vmid %s is %s" % (vm[0]['name'], vmid, current), **status)
+                    #module.exit_json(changed=False, msg="VM %s with vmid %s is %s" % (vm[0]['name'], vmid, current),  **results)
+                    #module.exit_json(changed=True, msg="VM %s with vmid %s deployed.%s" % (name, vmid, template_msg), **results)
             except Exception as e:
                 if name is not None and vmid is not None:
                     module.fail_json(msg="Unable to get vm {0} with vmid {1} status: ".format(name, vmid) + str(e))
@@ -1185,6 +1200,40 @@ def main():
                     module.fail_json(msg="Unable to get vm {0} status: ".format(name) + str(e))
                 elif vmid is not None:
                     module.fail_json(msg="Unable to get vm with vmid {0} status: ".format(vmid) + str(e))
+
+    elif state == 'vminfo':
+        status = {}
+        if vmid is None:
+            current = 'absent'
+            status['status'] = current
+            module.exit_json(changed=False, msg="VM %s is %s" % (name, current), **status)
+
+        vm = get_vm(proxmox, vmid)
+        if not vm:
+            current = 'absent'
+            status['status'] = current
+            if name is not None:
+                module.exit_json(changed=False, msg="VM %s with vmid %s is %s" % (name, vmid, current), **status)
+            else:
+                module.exit_json(changed=False, msg="VM with vmid %s is %s" % (vmid, current), **status)
+        else:
+            try:
+                get_vminfo_raw(module, proxmox, node, vmid)
+
+                current = getattr(proxmox.nodes(vm[0]['node']), VZ_TYPE)(vmid).status.current.get()['status']
+                status['status'] = current
+                results['status'] = current
+                if status:
+                    module.exit_json(changed=False, msg="VM %s with vmid %s is %s" % (vm[0]['name'], vmid, current),  **results)
+            except Exception as e:
+                if name is not None and vmid is not None:
+                    module.fail_json(msg="Unable to get vm {0} with vmid {1} status: ".format(name, vmid) + str(e))
+                elif name is not None:
+                    module.fail_json(msg="Unable to get vm {0} status: ".format(name) + str(e))
+                elif vmid is not None:
+                    module.fail_json(msg="Unable to get vm with vmid {0} status: ".format(vmid) + str(e))
+
+
 
 
 if __name__ == '__main__':

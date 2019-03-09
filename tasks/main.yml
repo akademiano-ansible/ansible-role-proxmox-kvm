@@ -2,6 +2,6 @@
 
 - name: create kvm vms
   include_tasks: vm-kvm.yml
-  loop: "{{proxmox.vms.kvm}}"
+  loop: "{{proxmox_vms_kvm}}"
   loop_control:
     loop_var: vm
