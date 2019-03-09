@@ -67,6 +67,20 @@
   when: net_str_results.results | length >0
 
 # iscsi prepare
+- name: prepare scsi| item | generate config string
+  set_fact:
+    scsi_str: '"{{item.name}}":"{{item.storage}}:{{item.size}},format={{item.format}}"'
+  loop: "{{vm.scsi}}"
+  when: item.name not in vm_info.vminfo
+  register: scsi_str_results
+
+#- debug: msg="{{scsi_str_results.results}}"
+#- meta: end_play
+
+- name: prepare scsi | full | generate config string
+  set_fact: 
+    vm_scsi: "{ {{scsi_str_results.results | map(attribute='ansible_facts') | select('defined') | map(attribute='scsi_str') | list | join(', ')}} }"
+  when: scsi_str_results.results | length > 0
 
 - name: "Update VM-KVM | Settings"
   delegate_to: 127.0.0.1
@@ -83,15 +97,17 @@
     cpu: "{{vm.cpu}}"
     net: "{{vm_net | default ({})}}"
     scsi: "{{vm_scsi | default ({})}}"
+  register: update_result
 
+- debug: msg="{{update_result}}"
 
-#- name: "Start VM-KVM"
-#  delegate_to: 127.0.0.1
-#  proxmox_kvm:
-#    api_user: "{{proxmox_api.user}}"
-#    api_password: "{{proxmox_api_password}}"
-#    api_host: "{{proxmox_api.host}}"
-#    validate_certs: "{{proxmox_api.validate_certs| default (proxmox_default_api_validate_certs)}}"
-#    vmid: "{{vm.id}}"
-#    node: "{{vm.node|default(proxmox_default_kvm_node)}}"
-#    state: started
+- name: "Start VM-KVM"    git push --set-upstream origin proxmox_kvm_py
+  delegate_to: 127.0.0.1
+  proxmox_kvm:
+    api_user: "{{proxmox_api.user}}"
+    api_password: "{{proxmox_api_password}}"
+    api_host: "{{proxmox_api.host}}"
+    validate_certs: "{{proxmox_api.validate_certs| default (proxmox_default_api_validate_certs)}}"
+    vmid: "{{vm.id}}"
+    node: "{{vm.node|default(proxmox_default_kvm_node)}}"
+    state: started
