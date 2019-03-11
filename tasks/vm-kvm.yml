@@ -13,8 +13,13 @@
     node: "{{vm.node|default(proxmox_default_kvm_node)}}"
     full: no
     state: present
+  register: clone_result
 
-- name: get vm current settings
+- pause:
+    minutes: 1
+  when: clone_result.changed
+
+- name: "get vm current settings {{vm.name}}"
   delegate_to: 127.0.0.1
   proxmox_kvm:
     api_user: "{{proxmox_api.user}}"
@@ -23,7 +28,6 @@
     validate_certs: "{{proxmox_api_validate_certs| default(proxmox_default_api_validate_certs, true)}}"
     node: "{{vm.node|default(proxmox_default_kvm_node)}}"
     vmid: "{{vm.id}}"
-    name: "{{vm.name}}"
     state: vminfo 
   register: vm_info
 
@@ -97,7 +101,7 @@
     cpu: "{{vm.cpu}}"
     net: "{{vm_net | default ({})}}"
     scsi: "{{vm_scsi | default ({})}}"
-    description: "{{vm.description| default('')}}"
+    description: "{{vm.description | default('{}' | from_json) | to_json }}"
 
 - name: "Start VM-KVM"
   delegate_to: 127.0.0.1
