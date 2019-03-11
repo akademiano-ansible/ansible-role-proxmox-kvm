@@ -97,11 +97,9 @@
     cpu: "{{vm.cpu}}"
     net: "{{vm_net | default ({})}}"
     scsi: "{{vm_scsi | default ({})}}"
-  register: update_result
+    description: "{{vm.description| default('')}}"
 
-- debug: msg="{{update_result}}"
-
-- name: "Start VM-KVM"    git push --set-upstream origin proxmox_kvm_py
+- name: "Start VM-KVM"
   delegate_to: 127.0.0.1
   proxmox_kvm:
     api_user: "{{proxmox_api.user}}"
